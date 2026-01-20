@@ -1,25 +1,37 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using IEMS_API.Data;
 
 namespace IEMS_API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
-public class WeatherForecastController : ControllerBase
+[Route("health")]
+public class HealthController : ControllerBase
 {
-    private static readonly string[] Summaries =
-    [
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    ];
+    private readonly AppDbContext _dbContext;
 
-    [HttpGet(Name = "GetWeatherForecast")]
-    public IEnumerable<WeatherForecast> Get()
+    public HealthController(AppDbContext dbContext)
     {
-        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        _dbContext = dbContext;
+    }
+
+    [HttpGet]
+    public ActionResult<string> Get()
+    {
+        return Ok("Healthy");
+    }
+
+    [HttpGet("database")]
+    public async Task<ActionResult<string>> CheckDatabase()
+    {
+        try
         {
-            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            TemperatureC = Random.Shared.Next(-20, 55),
-            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-        })
-        .ToArray();
+            await _dbContext.Database.CanConnectAsync();
+            return Ok("Database is reachable");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(503, $"Database is unreachable: {ex.Message}");
+        }
     }
 }
